@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     id("app.cash.sqldelight") version "2.1.0"
+    kotlin("plugin.serialization") version "2.1.10"
 }
 
 sqldelight {
@@ -49,6 +50,9 @@ kotlin {
             implementation("io.insert-koin:koin-android")
             // SQLDelight
             implementation("app.cash.sqldelight:android-driver:2.1.0")
+            // KTOR
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.kotlinx.coroutines.android)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -70,10 +74,17 @@ kotlin {
             implementation(libs.insert.koin.koin.core)
             implementation(libs.insert.koin.koin.compose)
             api(libs.precompose.koin)
+            // KTOR
+            implementation(libs.ktor.client.core)
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.ktor.serialization)
+            implementation(libs.ktor.content.negotiation)
 
         }
         iosMain.dependencies {
             implementation("app.cash.sqldelight:native-driver:2.1.0")
+            //KTOR
+            implementation(libs.ktor.client.darwin)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
