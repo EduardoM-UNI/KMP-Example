@@ -3,6 +3,7 @@ package org.example.project.data
 import com.expenseApp.db.AppDatabase
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -104,7 +105,10 @@ class ExpensesRepoImpl(
         //return expenseManager.getCategories()
     }
 
-    override suspend fun deleteExpense(expense: Expense): List<Expense> {
-        TODO("Not yet implemented")
+    override suspend fun deleteExpense(id: Long) {
+        httpClient.delete("$BASE_URL/expenses/${id}")
+        queries.transaction {
+            queries.delete(id = id)
+        }
     }
 }
