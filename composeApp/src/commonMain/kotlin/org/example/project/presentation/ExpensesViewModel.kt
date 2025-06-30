@@ -1,5 +1,6 @@
 package org.example.project.presentation
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -11,58 +12,79 @@ import org.example.project.model.Expense
 import org.example.project.model.ExpenseCategory
 
 
-data class ExpensesUiState(
-    val expenses: List<Expense> = emptyList(),
-    val total: Double = 0.0
-)
+sealed class ExpensesUiState {
+    object Loading : ExpensesUiState()
+    data class Success(val expenses: List<Expense>, val total: Double) : ExpensesUiState()
+    data class Error(val message: String) : ExpensesUiState()
+}
 
 class ExpensesViewModel(private val repo: ExpenseRepository) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ExpensesUiState())
+    private val _uiState = MutableStateFlow<ExpensesUiState>(ExpensesUiState.Loading)
     val uiState = _uiState.asStateFlow()
-    private var allExpenses: MutableList<Expense> = mutableListOf()
+
 
     init {
-        getAllexpenses()
+        getExpensesList()
     }
 
-    private fun updatExpensesList() {
+    private fun getExpensesList(){
         viewModelScope.launch {
-            allExpenses = repo.getAllExpenses().toMutableList()
-            updateState()
+            try {
+                delay(2000)
+                val expenses = repo.getAllExpenses()
+                _uiState.value = ExpensesUiState.Success(expenses, expenses.sumOf { it.amount })
+            } catch (e: Exception) {
+                _uiState.value = ExpensesUiState.Error(e.message ?: "Ha ocurrido un error")
+            }
         }
     }
 
-    private fun updateState(){
-        _uiState.update { state ->
-            state.copy(expenses = allExpenses, total = allExpenses.sumOf { it.amount })
+    private suspend fun updatExpensesList() {
+        try {
+            val expenses = repo.getAllExpenses()
+            _uiState.value = ExpensesUiState.Success(expenses, expenses.sumOf { it.amount })
+        } catch (e: Exception) {
+            _uiState.value = ExpensesUiState.Error(e.message ?: "Ha ocurrido un error")
         }
     }
 
-    private fun getAllexpenses() {
-        repo.getAllExpenses()
-        updatExpensesList()
-    }
 
     fun addExpense(expense: Expense) {
-        repo.addExpense(expense)
-        updatExpensesList()
-
+        viewModelScope.launch {
+            try {
+                repo.addExpense(expense)
+                updatExpensesList()
+            }catch (e: Exception){
+                _uiState.value = ExpensesUiState.Error(e.message ?: "Ha ocurrido un error")
+            }
+        }
     }
 
     fun editExpense(expense: Expense) {
-        repo.editExpense(expense)
-        updatExpensesList()  // Actualizamos la lista
+        viewModelScope.launch {
+            try {
+                repo.editExpense(expense)
+                updatExpensesList()
+            }catch (e: Exception){
+                _uiState.value = ExpensesUiState.Error(e.message ?: "Ha ocurrido un error")
+            }
+        }
     }
 
     fun deleteExpense(expense: Expense) {
-            repo.deleteExpense(expense)
-            updatExpensesList()
+        viewModelScope.launch {
+            try {
+                repo.deleteExpense(expense)
+                updatExpensesList()
+            }catch (e: Exception){
+                _uiState.value = ExpensesUiState.Error(e.message ?: "Ha ocurrido un error")
+            }
+        }
     }
 
-    fun getExpenseWithID(id: Long): Expense {
-        return allExpenses.first { it.id == id }
-
+    fun getExpenseWithID(id: Long): Expense? {
+        return (_uiState.value as? ExpensesUiState.Success)?.expenses?.find { it.id == id }
     }
 
     fun getCategories():List<ExpenseCategory>{
